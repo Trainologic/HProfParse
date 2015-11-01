@@ -19,6 +19,8 @@ object Tag {
     case 4 => uint32
   }
 
+  def decode[A, B](c: Codec[A])(f: ((((Long, Long), A)) => B)): Codec[B] =
+    Tag.tagDec(c).asDecoder.map(f).decodeOnly
 }
 
 case class UTF8(timestamp: Long, id: Long, str: String) extends Tag(timestamp)
@@ -35,9 +37,9 @@ object LOADCLASS {
   def loadclasscodec(idSize: Int) = {
     val idCodec = Tag.fromIdSize(idSize)
 
-    Tag.tagDec(uint32 ~ idCodec ~ uint32 ~ idCodec).asDecoder.map {
+    Tag.decode(uint32 ~ idCodec ~ uint32 ~ idCodec) {
       case (p1, (((p2, p3), p4), p5)) => ((((p1._1, p2), p3), p4), p5)
-    }.decodeOnly.flattenLeftPairs.as[LOADCLASS]
+    }.flattenLeftPairs.as[LOADCLASS]
   }
 }
 
@@ -46,20 +48,42 @@ object TRACE {
   def tracecodec(idSize: Int) = {
     val idCodec = Tag.fromIdSize(idSize)
 
-    Tag.tagDec(uint32 ~ uint32 ~ uint32 ~ list(idCodec)).asDecoder.map {
+    Tag.decode(uint32 ~ uint32 ~ uint32 ~ list(idCodec)) {
       case (p1, (((p2, p3), p4), p5)) => (((p1._1, p2), p3), p5)
-    }.decodeOnly.flattenLeftPairs.as[TRACE]
+    }.flattenLeftPairs.as[TRACE]
   }
 }
 case class FRAME(timestamp: Long, stackFrameId: Long, methodNameId: Long, methodSignatureId: Long, sourceFileNameId: Long, classSerialNum: Long, lineNumber: Int) extends Tag(timestamp)
 object FRAME {
   def framecodec(idSize: Int) = {
     val idCodec = Tag.fromIdSize(idSize)
-    Tag.tagDec(idCodec ~ idCodec ~ idCodec ~ idCodec ~ uint32 ~ int32).asDecoder.map {
+    Tag.decode(idCodec ~ idCodec ~ idCodec ~ idCodec ~ uint32 ~ int32) {
       case (p1, (((((p2, p3), p4), p5), p6), p7)) => ((((((p1._1, p2), p3), p4), p5), p6), p7)
-    }.decodeOnly.flattenLeftPairs.as[FRAME]
+    }.flattenLeftPairs.as[FRAME]
   }
 }
+
+abstract sealed class HeapDumpRecord
+object HeapDumpRecord {
+  def heapDumpRecordCodec(idCodec: Codec[Long]) = discriminated[HeapDumpRecord].by(uint8).
+    typecase(0xFF, idCodec.as[HPROF_GC_ROOT_UNKNOWN]).
+    typecase(0x01, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_OBJ]).
+    typecase(0x02, (idCodec ~ idCodec).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_GLOBAL]).
+    typecase(0x03, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_LOCAL])
+}
+case class HPROF_GC_ROOT_UNKNOWN(objId: Long) extends HeapDumpRecord
+case class HPROF_GC_ROOT_THREAD_OBJ(threadObjId: Long, seqNum: Long, stackTraceSeqNum: Long) extends HeapDumpRecord
+case class HPROF_GC_ROOT_JNI_GLOBAL(objId: Long, jniGlobalRefId: Long) extends HeapDumpRecord
+case class HPROF_GC_ROOT_JNI_LOCAL(objId: Long, threadSerNum: Long, frameNum: Long) extends HeapDumpRecord
+
+case class HEAPDUMP(timestamp: Long, heapDumpRecords: List[HeapDumpRecord])
+object HEAPDUMP {
+  def heapdumpcodec(idSize: Int) = {
+    val idCodec = Tag.fromIdSize(idSize)
+
+  }
+}
+
 case class Header(version: String, sizeOfIdentifiers: Long, timestamp: Long)
 object Header {
   val headerCodec = (cstring :: uint32 :: int64).as[Header]

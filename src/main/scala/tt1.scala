@@ -24,8 +24,8 @@ object tt1 extends App {
     //     typecase(6, Tag.tagCodec ~ codecs.bits(16L) ~ float ~ uint32 ~ uint32 ~ int64 ~ int64 ~ uint32)
 
     //val xx = (Header.headerCodec.flatZip(h => UTF8.utf8codec(h.sizeOfIdentifiers.toInt))~ byte).decodeValue(bitVector)
-    val xx = (Header.headerCodec ~ listOfN(provide(154319), xxx)).decodeValue(bitVector)
-    //val xx = (Header.headerCodec ~ list(xxx)).decodeValue(bitVector)
+    //val xx = (Header.headerCodec ~ listOfN(provide(154319), xxx)).decodeValue(bitVector)
+    val xx = (Header.headerCodec ~ list(xxx)).decodeValue(bitVector)
 
     xx.fold(println, x => println(x._2.takeRight(20)))
 
