@@ -14,8 +14,6 @@ object tt1 extends App {
   
   val fc = new FileInputStream(path).getChannel
   try {
-    val bitVector = BitVector.fromMmap(fc, 1024 * 1000 * 32)
-    println(s"size: ${bitVector.size}")
 
     val xxx = discriminated[Any].by(byte).typecase(1, UTF8.utf8codec(8)).
       typecase(2, LOADCLASS.loadclasscodec(8)).
@@ -25,6 +23,11 @@ object tt1 extends App {
 
     //val xx = (Header.headerCodec.flatZip(h => UTF8.utf8codec(h.sizeOfIdentifiers.toInt))~ byte).decodeValue(bitVector)
     //val xx = (Header.headerCodec ~ listOfN(provide(154319), xxx)).decodeValue(bitVector)
+
+      
+      
+      val bitVector = BitVector.fromMmap(fc, 1024 * 1000 * 32)
+      println(s"size: ${bitVector.size}")
     val xx = (Header.headerCodec ~ list(xxx)).decodeValue(bitVector)
 
     xx.fold(println, x => println(x._2.takeRight(20)))
