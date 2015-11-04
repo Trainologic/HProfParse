@@ -6,7 +6,7 @@ import Utils._
 object Types {
   
   object BasicType {
-    def decoder(idSize: Int): Codec[BasicType] = 
+    val decoder: Codec[BasicType] = 
       discriminated[BasicType].by(byte).typecase(1,  provide(ArrayType))
       .typecase(2,  provide(ObjectType))
       .typecase(4,  provide(BooleanType))
@@ -19,46 +19,47 @@ object Types {
       .typecase(11,  provide(LongType))
   }
   
-  abstract sealed class BasicType 
+  abstract sealed class BasicType {
+    def codec(idCodec: Codec[Long]): Decoder[Value]
+  }
   
   case object ArrayType extends BasicType {
-	  def codec(idCodec: Codec[Long]) = idCodec.as[ArrayObjValue]
+	  override def codec(idCodec: Codec[Long]) = idCodec.as[ArrayObjValue]
   }
   
   
   case object ObjectType extends BasicType {
-	   def decodeValueCodec(idCodec: Codec[Long]) = idCodec.as[ObjValue]
+	   override def codec(idCodec: Codec[Long]) = idCodec.as[ObjValue]
   }
   case object BooleanType extends BasicType{
-	   val decodeValueCodec = bool(8).as[BooleanValue]
+	   override def codec(idCodec: Codec[Long]) = bool(8).as[BooleanValue]
     
-  } 
+  }  
   case object CharType extends BasicType {
-	   val decodeValueCodec = short16.decoderOnlyMap(_.toChar).as[CharValue] 
-    
+	   override def codec(idCodec: Codec[Long]) = short16.decoderOnlyMap(_.toChar).as[CharValue] 
   }
   case object FloatType extends BasicType {
-	   val decodeValueCodec = float.as[FloatValue] 
+	   override def codec(idCodec: Codec[Long]) = float.as[FloatValue] 
     
   }
   case object DoubleType extends BasicType {
-	   val decodeValueCodec = double.as[DoubleValue] 
+	   override def codec(idCodec: Codec[Long]) = double.as[DoubleValue] 
     
   }
   case object ByteType extends BasicType{
-	   val decodeValueCodec = byte.as[ByteValue] 
+	   override def codec(idCodec: Codec[Long]) = byte.as[ByteValue] 
     
   }
   case object ShortType extends BasicType{
-	   val decodeValueCodec = short16.as[ShortValue] 
+	   override def codec(idCodec: Codec[Long]) = short16.as[ShortValue] 
     
   }
   case object IntType extends BasicType{
-	   val decodeValueCodec = int32.as[IntValue] 
+	   override def codec(idCodec: Codec[Long]) = int32.as[IntValue] 
     
   }
   case object LongType extends BasicType{
-	   val decodeValueCodec = int64L.as[LongValue] 
+	   override def codec(idCodec: Codec[Long]) = int64L.as[LongValue] 
     
   }
 
