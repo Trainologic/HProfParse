@@ -18,7 +18,7 @@ object Types {
     
   }
   case object CharType extends BasicType(5, 2) {
-	  override val decodeValueCodec = short16.asDecoder.map(_.toChar).decodeOnly.as[CharValue] 
+	  override val decodeValueCodec = short16.decoderOnlyMap(_.toChar).as[CharValue] 
     
   }
   case object FloatType extends BasicType(6, 4) {

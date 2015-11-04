@@ -18,14 +18,14 @@ object Tag {
   
 
   def decode[A, B](c: Codec[A])(f: ((((Long, Long), A)) => B)): Codec[B] =
-    Tag.tagDec(c).asDecoder.map(f).decodeOnly
+    Tag.tagDec(c).decoderOnlyMap(f)
 }
 
 case class UTF8(timestamp: Long, id: Long, str: String) extends Tag(timestamp)
 object UTF8 {
   def utf8codec(idSize: Int) = {
     val idCodec = fromIdSize(idSize)
-    Tag.tagDec(int64 ~ fallback(codecs.bits.asDecoder.map(_ => "*unknown*").decodeOnly, utf8).asDecoder.map(_.fold(identity, identity)).decodeOnly).
+    Tag.tagDec(int64 ~ fallback(codecs.bits.decoderOnlyMap(_ => "*unknown*"), utf8).decoderOnlyMap(_.fold(identity, identity))).
       map(z => UTF8(z._1._1, z._2._1, z._2._2)).decodeOnly
 
   }
@@ -51,7 +51,8 @@ object TRACE {
     }.flattenLeftPairs.as[TRACE]
   }
 }
-case class FRAME(timestamp: Long, stackFrameId: Long, methodNameId: Long, methodSignatureId: Long, sourceFileNameId: Long, classSerialNum: Long, lineNumber: Int) extends Tag(timestamp)
+case class FRAME(timestamp: Long, stackFrameId: Long, methodNameId: Long, methodSignatureId: Long, 
+    sourceFileNameId: Long, classSerialNum: Long, lineNumber: Int) extends Tag(timestamp)
 object FRAME {
   def framecodec(idSize: Int) = {
     val idCodec = fromIdSize(idSize)
