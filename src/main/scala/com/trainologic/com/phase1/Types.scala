@@ -4,8 +4,13 @@ import scodec.bits._
 import codecs._
 import Utils._
 object Types {
+  
+  object BasicType {
+    def decoder: Codec[BasicType] = ???
+  }
+  
   abstract sealed class BasicType(val code: Byte, val size: Int) {
-    def decodeValueCodec :Codec[Value] 
+    def decodeValueCodec :Decoder[Value] 
   }
   case class ArrayType(idSize: Int) extends BasicType(1, idSize) {
     override val decodeValueCodec = fromIdSize(idSize).as[ArrayObjValue]
@@ -46,6 +51,10 @@ object Types {
     
   }
 
+  object Value {
+    def decoder: Codec[Value] = ???
+  }
+  
   abstract sealed class Value
   case class ArrayObjValue(id: Long) extends Value
   case class ObjValue(id: Long) extends Value
