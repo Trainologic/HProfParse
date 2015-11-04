@@ -73,9 +73,9 @@ object HeapDumpRecord {
     typecase(0x05, (idCodec).as[HPROF_GC_ROOT_STICKY_CLASS]).
     typecase(0x07, (idCodec).as[HPROF_GC_ROOT_MONITOR_USED]).
     typecase(0x03, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JAVA_FRAME]).
-    typecase(0x20, ((idCodec ~ uint32 ~ uint32 ~ uint32 ~ uint32 ~ uint32 <~ ignore(64)) ~ uint32 ~ 
-        ConstantPool.codec ~ HPROF_GC_CLASS_DUMP.staticFieldsCodec(idCodec) ~ 
-        HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP])
+    typecase(0x20, ((idCodec ~ uint32 ~ uint32 ~ uint32 ~ uint32 ~ uint32 <~ ignore(64)) ~ uint32 ~
+      ConstantPool.codec ~ HPROF_GC_CLASS_DUMP.staticFieldsCodec(idCodec) ~
+      HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP])
 }
 case class HPROF_GC_ROOT_UNKNOWN(objId: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_THREAD_OBJ(threadObjId: Long, seqNum: Long, stackTraceSeqNum: Long) extends HeapDumpRecord
@@ -87,31 +87,31 @@ case class HPROF_GC_ROOT_THREAD_BLOCK(objId: Long, threadSerNum: Long) extends H
 
 case class StaticField(fieldName: Long, fieldType: BasicType, value: Value)
 object StaticField {
-	def codec(idCodec: Codec[Long]) : Codec[StaticField] = (idCodec ~ BasicType.decoder ~ Value.decoder).flattenLeftPairs.as[StaticField]
-  
+  def codec(idCodec: Codec[Long]): Codec[StaticField] = (idCodec ~ BasicType.decoder ~ Value.decoder).flattenLeftPairs.as[StaticField]
+
 }
 
 case class InstanceField(fieldName: Long, fieldType: BasicType)
 object InstanceField {
-	def codec(idCodec: Codec[Long]) : Codec[InstanceField] = (idCodec ~ BasicType.decoder).flattenLeftPairs.as[InstanceField]
-  
+  def codec(idCodec: Codec[Long]): Codec[InstanceField] = (idCodec ~ BasicType.decoder).flattenLeftPairs.as[InstanceField]
+
 }
 case class ConstantPoolEntry(index: Int, entryType: BasicType, value: Value)
 object ConstantPoolEntry {
-  def codec : Codec[ConstantPoolEntry] = (uint16 ~ BasicType.decoder ~ Value.decoder).flattenLeftPairs.as[ConstantPoolEntry]
+  def codec: Codec[ConstantPoolEntry] = (uint16 ~ BasicType.decoder ~ Value.decoder).flattenLeftPairs.as[ConstantPoolEntry]
 }
 case class ConstantPool(entries: List[ConstantPoolEntry])
 object ConstantPool {
-  def codec: Codec[ConstantPool] = uint16.flatMap(paddedFixedSizeBytes(_, list(ConstantPoolEntry.codec), ignore(1))).decodeOnly.as[ConstantPool] 
+  def codec: Codec[ConstantPool] = uint16.flatMap(paddedFixedSizeBytes(_, list(ConstantPoolEntry.codec), ignore(1))).decodeOnly.as[ConstantPool]
 }
 
 case class HPROF_GC_CLASS_DUMP(clzObjId: Long, stackTraceSeqNum: Long, superClzObjId: Long,
                                clzLoaderObjId: Long, signersObjId: Long, protectionDomainObjId: Long,
                                instanceSize: Long, constantPool: ConstantPool, staticFields: List[StaticField], instanceFields: List[InstanceField]) extends HeapDumpRecord
 object HPROF_GC_CLASS_DUMP {
-  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] = 
+  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] =
     uint16.flatMap(paddedFixedSizeBytes(_, list(StaticField.codec(idCodec)), ignore(1))).decodeOnly
-  def instanceFieldsCodec(idCodec: Codec[Long]): Codec[List[InstanceField]] = 
+  def instanceFieldsCodec(idCodec: Codec[Long]): Codec[List[InstanceField]] =
     uint16.flatMap(paddedFixedSizeBytes(_, list(InstanceField.codec(idCodec)), ignore(1))).decodeOnly
 }
 
