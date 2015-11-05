@@ -9,7 +9,7 @@ import com.trainologic.com.phase1._
 
 object tt1 extends App {
 
-  val path = """f:\todelete\jb.hprof"""
+  val path = """f:\todelete\gf.hprof"""
 
   
   val fc = new FileInputStream(path).getChannel
@@ -18,7 +18,8 @@ object tt1 extends App {
     val xxx = discriminated[Any].by(byte).typecase(1, UTF8.utf8codec(8)).
       typecase(2, LOADCLASS.loadclasscodec(8)).
       typecase(5, TRACE.tracecodec(8)).
-      typecase(4, FRAME.framecodec(8))
+      typecase(4, FRAME.framecodec(8)).
+      typecase(12, HEAPDUMP.heapdumpcodec(8))
     //     typecase(6, Tag.tagCodec ~ codecs.bits(16L) ~ float ~ uint32 ~ uint32 ~ int64 ~ int64 ~ uint32)
 
     //val xx = (Header.headerCodec.flatZip(h => UTF8.utf8codec(h.sizeOfIdentifiers.toInt))~ byte).decodeValue(bitVector)

@@ -63,10 +63,6 @@ object Types {
     
   }
 
-  object Value {
-    def decoder: Codec[Value] = ???
-  }
-  
   abstract sealed class Value
   case class ArrayObjValue(id: Long) extends Value
   case class ObjValue(id: Long) extends Value
