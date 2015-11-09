@@ -7,6 +7,8 @@ import scodec.bits._
 import codecs._
 import com.trainologic.com.phase1.Types._
 import Utils._
+import scodec.bits.BitVector.Bytes
+import scodec.bits.BitVector.Bytes
 sealed abstract class Tag(timestamp: Long)
 
 object Tag {
@@ -64,7 +66,6 @@ object FRAME {
 abstract sealed class HeapDumpRecord
 object HeapDumpRecord {
   def heapDumpRecordCodec(idCodec: Codec[Long]) = discriminated[HeapDumpRecord].by(byte).
-   
     typecase(-1, idCodec.as[HPROF_GC_ROOT_UNKNOWN]).
     typecase(8, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_OBJ]).
     typecase(1, (idCodec ~ idCodec).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_GLOBAL]).
@@ -76,7 +77,15 @@ object HeapDumpRecord {
     typecase(3, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JAVA_FRAME]).
     typecase(32, ((idCodec ~ uint32 ~ idCodec ~ idCodec ~ idCodec ~ idCodec <~ ignore(128)) ~ uint32 ~
       ConstantPool.codec(idCodec) ~ HPROF_GC_CLASS_DUMP.staticFieldsCodec(idCodec) ~
-      HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP])
+      HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP]).
+    typecase(33, (idCodec ~ uint32 ~ idCodec ~ variableSizeBytesLong(uint32, bytes)).flattenLeftPairs.as[INSTANCE_DUMP]).
+    typecase(34, (idCodec ~ uint32 ~ uint32 ~ variableSizeBytesLong(uint32, bytes)).flattenLeftPairs.as[OBJECT_ARRAY_DUMP]).
+    typecase(35, (idCodec ~ uint32 ~ (uint32.flatZip(ne => BasicType.decoder.flatZip {
+      typ => listOfN(provide(ne.toInt), typ.codec(idCodec).decodeOnly)
+    }))).decoderOnlyMap {
+      case ((x1_1, x1_2), (x2, (bt, vl))) => (((x1_1, x1_2), bt), vl)
+    }.flattenLeftPairs.as[PRIMITIVE_ARRAY_DUMP])
+
 }
 case class HPROF_GC_ROOT_UNKNOWN(objId: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_THREAD_OBJ(threadObjId: Long, seqNum: Long, stackTraceSeqNum: Long) extends HeapDumpRecord
@@ -98,7 +107,7 @@ object InstanceField {
 }
 case class ConstantPoolEntry(index: Int, entryType: BasicType, value: Value)
 object ConstantPoolEntry {
-  def codec(idCodec: Codec[Long]): Codec[ConstantPoolEntry] = (uint16 ~ BasicType.decoder).flatZip( _._2.codec(idCodec).decodeOnly).flattenLeftPairs.as[ConstantPoolEntry]
+  def codec(idCodec: Codec[Long]): Codec[ConstantPoolEntry] = (uint16 ~ BasicType.decoder).flatZip(_._2.codec(idCodec).decodeOnly).flattenLeftPairs.as[ConstantPoolEntry]
 }
 case class ConstantPool(entries: List[ConstantPoolEntry])
 object ConstantPool {
@@ -109,7 +118,7 @@ case class HPROF_GC_CLASS_DUMP(clzObjId: Long, stackTraceSeqNum: Long, superClzO
                                clzLoaderObjId: Long, signersObjId: Long, protectionDomainObjId: Long,
                                instanceSize: Long, constantPool: ConstantPool, staticFields: List[StaticField], instanceFields: List[InstanceField]) extends HeapDumpRecord
 object HPROF_GC_CLASS_DUMP {
-  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] = 
+  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] =
     listOfN(uint16, StaticField.codec(idCodec)).decodeOnly
   def instanceFieldsCodec(idCodec: Codec[Long]): Codec[List[InstanceField]] =
     listOfN(uint16, InstanceField.codec(idCodec)).decodeOnly
@@ -118,17 +127,18 @@ object HPROF_GC_CLASS_DUMP {
 case class HPROF_GC_ROOT_STICKY_CLASS(objId: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_MONITOR_USED(objId: Long) extends HeapDumpRecord
 
+case class PRIMITIVE_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementType: BasicType, elements: List[Value]) extends HeapDumpRecord
+case class OBJECT_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementClzId: Long, elements: List[Long]) extends HeapDumpRecord
+case class INSTANCE_DUMP(objId: Long, stackTraceSeqNum: Long, clzId: Long, content: ByteVector) extends HeapDumpRecord
+
 case class HEAPDUMP(timestamp: Long, heapDumpRecords: List[HeapDumpRecord])
 object HEAPDUMP {
   def heapdumpcodec(idSize: Int) = {
     val idCodec = fromIdSize(idSize)
-    Tag.decode(list(HeapDumpRecord.heapDumpRecordCodec(idCodec))){
+    Tag.decode(list(HeapDumpRecord.heapDumpRecordCodec(idCodec))) {
       case (p1, x) => (p1._1, x)
     }.flattenLeftPairs.as[HEAPDUMP]
   }
-  
-  //def mmm(idSize: Int) = Tag.tagCodec.flatZip(x => paddedFixedSizeBytes(x._2, bytes, ignore(1)))
-  
 }
 
 case class Header(version: String, sizeOfIdentifiers: Long, timestamp: Long)
