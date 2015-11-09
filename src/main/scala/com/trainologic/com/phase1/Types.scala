@@ -7,7 +7,8 @@ object Types {
   
   object BasicType {
     val decoder: Codec[BasicType] = 
-      discriminated[BasicType].by(byte).typecase(1,  provide(ArrayType))
+      discriminated[BasicType].by(byte)
+      .typecase(1,  provide(ArrayType))
       .typecase(2,  provide(ObjectType))
       .typecase(4,  provide(BooleanType))
       .typecase(5,  provide(CharType))

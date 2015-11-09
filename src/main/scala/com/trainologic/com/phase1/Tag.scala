@@ -63,17 +63,18 @@ object FRAME {
 
 abstract sealed class HeapDumpRecord
 object HeapDumpRecord {
-  def heapDumpRecordCodec(idCodec: Codec[Long]) = discriminated[HeapDumpRecord].by(uint8).
-    typecase(0xFF, idCodec.as[HPROF_GC_ROOT_UNKNOWN]).
-    typecase(0x08, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_OBJ]).
-    typecase(0x01, (idCodec ~ idCodec).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_GLOBAL]).
-    typecase(0x02, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_LOCAL]).
-    typecase(0x04, (idCodec ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_NATIVE_STACK]).
-    typecase(0x06, (idCodec ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_BLOCK]).
-    typecase(0x05, (idCodec).as[HPROF_GC_ROOT_STICKY_CLASS]).
-    typecase(0x07, (idCodec).as[HPROF_GC_ROOT_MONITOR_USED]).
-    typecase(0x03, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JAVA_FRAME]).
-    typecase(0x20, ((idCodec ~ uint32 ~ uint32 ~ uint32 ~ uint32 ~ uint32 <~ ignore(64)) ~ uint32 ~
+  def heapDumpRecordCodec(idCodec: Codec[Long]) = discriminated[HeapDumpRecord].by(byte).
+   
+    typecase(-1, idCodec.as[HPROF_GC_ROOT_UNKNOWN]).
+    typecase(8, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_OBJ]).
+    typecase(1, (idCodec ~ idCodec).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_GLOBAL]).
+    typecase(2, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_LOCAL]).
+    typecase(4, (idCodec ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_NATIVE_STACK]).
+    typecase(6, (idCodec ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_BLOCK]).
+    typecase(5, (idCodec).as[HPROF_GC_ROOT_STICKY_CLASS]).
+    typecase(7, (idCodec).as[HPROF_GC_ROOT_MONITOR_USED]).
+    typecase(3, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_JAVA_FRAME]).
+    typecase(32, ((idCodec ~ uint32 ~ idCodec ~ idCodec ~ idCodec ~ idCodec <~ ignore(128)) ~ uint32 ~
       ConstantPool.codec(idCodec) ~ HPROF_GC_CLASS_DUMP.staticFieldsCodec(idCodec) ~
       HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP])
 }
@@ -84,7 +85,6 @@ case class HPROF_GC_ROOT_JNI_LOCAL(objId: Long, threadSerNum: Long, frameNum: Lo
 case class HPROF_GC_ROOT_JAVA_FRAME(objId: Long, threadSerNum: Long, frameNum: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_NATIVE_STACK(objId: Long, threadSerNum: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_THREAD_BLOCK(objId: Long, threadSerNum: Long) extends HeapDumpRecord
-
 case class StaticField(fieldName: Long, fieldType: BasicType, value: Value)
 object StaticField {
   def codec(idCodec: Codec[Long]): Codec[StaticField] = ((idCodec ~ BasicType.decoder).flatZip(_._2.codec(idCodec).decodeOnly)).flattenLeftPairs.as[StaticField]
@@ -102,17 +102,17 @@ object ConstantPoolEntry {
 }
 case class ConstantPool(entries: List[ConstantPoolEntry])
 object ConstantPool {
-  def codec(idCodec: Codec[Long]): Codec[ConstantPool] = uint16.flatMap(paddedFixedSizeBytes(_, list(ConstantPoolEntry.codec(idCodec)), ignore(1))).decodeOnly.as[ConstantPool]
+  def codec(idCodec: Codec[Long]): Codec[ConstantPool] = listOfN(uint16, ConstantPoolEntry.codec(idCodec)).decodeOnly.as[ConstantPool]
 }
 
 case class HPROF_GC_CLASS_DUMP(clzObjId: Long, stackTraceSeqNum: Long, superClzObjId: Long,
                                clzLoaderObjId: Long, signersObjId: Long, protectionDomainObjId: Long,
                                instanceSize: Long, constantPool: ConstantPool, staticFields: List[StaticField], instanceFields: List[InstanceField]) extends HeapDumpRecord
 object HPROF_GC_CLASS_DUMP {
-  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] =
-    uint16.flatMap(paddedFixedSizeBytes(_, list(StaticField.codec(idCodec)), ignore(1))).decodeOnly
+  def staticFieldsCodec(idCodec: Codec[Long]): Codec[List[StaticField]] = 
+    listOfN(uint16, StaticField.codec(idCodec)).decodeOnly
   def instanceFieldsCodec(idCodec: Codec[Long]): Codec[List[InstanceField]] =
-    uint16.flatMap(paddedFixedSizeBytes(_, list(InstanceField.codec(idCodec)), ignore(1))).decodeOnly
+    listOfN(uint16, InstanceField.codec(idCodec)).decodeOnly
 }
 
 case class HPROF_GC_ROOT_STICKY_CLASS(objId: Long) extends HeapDumpRecord
@@ -126,6 +126,9 @@ object HEAPDUMP {
       case (p1, x) => (p1._1, x)
     }.flattenLeftPairs.as[HEAPDUMP]
   }
+  
+  //def mmm(idSize: Int) = Tag.tagCodec.flatZip(x => paddedFixedSizeBytes(x._2, bytes, ignore(1)))
+  
 }
 
 case class Header(version: String, sizeOfIdentifiers: Long, timestamp: Long)

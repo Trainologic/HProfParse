@@ -29,9 +29,10 @@ object tt1 extends App {
       
       val bitVector = BitVector.fromMmap(fc, 1024 * 1000 * 32)
       println(s"size: ${bitVector.size}")
-    val xx = (Header.headerCodec ~ list(xxx)).decodeValue(bitVector)
+    val xx = (Header.headerCodec ~ listOfN(provide(170298), xxx)).decodeValue(bitVector)
 
-    xx.fold(println, x => println(x._2.takeRight(20)))
+    //xx.fold(println, x => println(x._2.last.asInstanceOf[Tuple2[_,_]]._2.asInstanceOf[ByteVector].drop(1+7*8+4).take(100)))
+    xx.fold(println, x => println(x._2.last))
 
   } finally {
     fc.close()
