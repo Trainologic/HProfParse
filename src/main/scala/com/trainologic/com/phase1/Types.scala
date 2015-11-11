@@ -64,17 +64,17 @@ object Types {
     
   }
 
-  abstract sealed class Value
-  case class ArrayObjValue(id: Long) extends Value
-  case class ObjValue(id: Long) extends Value
-  case class BooleanValue(value : Boolean) extends Value  
-  case class CharValue(value: Char) extends Value  
-  case class FloatValue(value: Float) extends Value  
-  case class DoubleValue(value: Double) extends Value  
-  case class ByteValue(value: Byte) extends Value  
-  case class ShortValue(value: Short) extends Value  
-  case class IntValue(value: Int) extends Value  
-  case class LongValue(value: Long) extends Value  
+  sealed trait Value extends Any
+  case class ArrayObjValue(id: Long) extends AnyVal with Value
+  case class ObjValue(id: Long) extends AnyVal with Value
+  case class BooleanValue(value : Boolean) extends AnyVal with Value
+  case class CharValue(value: Char) extends AnyVal with Value
+  case class FloatValue(value: Float) extends AnyVal with Value
+  case class DoubleValue(value: Double) extends AnyVal with Value
+  case class ByteValue(value: Byte) extends AnyVal with Value
+  case class ShortValue(value: Short) extends AnyVal with Value
+  case class IntValue(value: Int) extends AnyVal with Value
+  case class LongValue(value: Long) extends AnyVal with Value
   
 }
 

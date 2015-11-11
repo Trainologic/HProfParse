@@ -32,7 +32,7 @@ object tt1 extends App {
     val xx = (Header.headerCodec ~ listOfN(provide(170298), xxx)).decodeValue(bitVector)
 
     //xx.fold(println, x => println(x._2.last.asInstanceOf[Tuple2[_,_]]._2.asInstanceOf[ByteVector].drop(1+7*8+4).take(100)))
-    xx.fold(println, x => println(x._2.last))
+    //xx.fold(println, x => println(x._2.last))
 
   } finally {
     fc.close()

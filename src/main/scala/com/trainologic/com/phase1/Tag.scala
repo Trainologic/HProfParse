@@ -79,7 +79,11 @@ object HeapDumpRecord {
       ConstantPool.codec(idCodec) ~ HPROF_GC_CLASS_DUMP.staticFieldsCodec(idCodec) ~
       HPROF_GC_CLASS_DUMP.instanceFieldsCodec(idCodec)).flattenLeftPairs.as[HPROF_GC_CLASS_DUMP]).
     typecase(33, (idCodec ~ uint32 ~ idCodec ~ variableSizeBytesLong(uint32, bytes)).flattenLeftPairs.as[INSTANCE_DUMP]).
-    typecase(34, (idCodec ~ uint32 ~ uint32 ~ variableSizeBytesLong(uint32, bytes)).flattenLeftPairs.as[OBJECT_ARRAY_DUMP]).
+    typecase(34, (idCodec ~ uint32 ~ uint32.flatMap { ne =>
+      idCodec ~ listOfN(provide(ne.toInt), idCodec)
+    }.decodeOnly).decoderOnlyMap {
+      case ((x1, x2), (x3, x4)) => (((x1, x2), x3), x4)
+    }.flattenLeftPairs.as[OBJECT_ARRAY_DUMP]).
     typecase(35, (idCodec ~ uint32 ~ (uint32.flatZip(ne => BasicType.decoder.flatZip {
       typ => listOfN(provide(ne.toInt), typ.codec(idCodec).decodeOnly)
     }))).decoderOnlyMap {
