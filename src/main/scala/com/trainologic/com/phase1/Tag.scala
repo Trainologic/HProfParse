@@ -65,7 +65,9 @@ object FRAME {
 
 abstract sealed class HeapDumpRecord
 object HeapDumpRecord {
-  def heapDumpRecordCodec(idCodec: Codec[Long]) = discriminated[HeapDumpRecord].by(byte).
+  def heapDumpRecordCodec(idSize: Int) = {
+    val idCodec = fromIdSize(idSize)
+    discriminated[HeapDumpRecord].by(byte).
     typecase(-1, idCodec.as[HPROF_GC_ROOT_UNKNOWN]).
     typecase(8, (idCodec ~ uint32 ~ uint32).flattenLeftPairs.as[HPROF_GC_ROOT_THREAD_OBJ]).
     typecase(1, (idCodec ~ idCodec).flattenLeftPairs.as[HPROF_GC_ROOT_JNI_GLOBAL]).
@@ -85,11 +87,11 @@ object HeapDumpRecord {
       case ((x1, x2), (x3, x4)) => (((x1, x2), x3), x4)
     }.flattenLeftPairs.as[OBJECT_ARRAY_DUMP]).
     typecase(35, (idCodec ~ uint32 ~ (uint32.flatZip(ne => BasicType.decoder.flatZip {
-      typ => listOfN(provide(ne.toInt), typ.codec(idCodec).decodeOnly)
+      typ => bytes(ne.toInt * typ.size(idSize))
     }))).decoderOnlyMap {
       case ((x1_1, x1_2), (x2, (bt, vl))) => (((x1_1, x1_2), bt), vl)
     }.flattenLeftPairs.as[PRIMITIVE_ARRAY_DUMP])
-
+  }
 }
 case class HPROF_GC_ROOT_UNKNOWN(objId: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_THREAD_OBJ(threadObjId: Long, seqNum: Long, stackTraceSeqNum: Long) extends HeapDumpRecord
@@ -131,15 +133,14 @@ object HPROF_GC_CLASS_DUMP {
 case class HPROF_GC_ROOT_STICKY_CLASS(objId: Long) extends HeapDumpRecord
 case class HPROF_GC_ROOT_MONITOR_USED(objId: Long) extends HeapDumpRecord
 
-case class PRIMITIVE_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementType: BasicType, elements: List[Value]) extends HeapDumpRecord
+case class PRIMITIVE_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementType: BasicType, elements: ByteVector) extends HeapDumpRecord
 case class OBJECT_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementClzId: Long, elements: List[Long]) extends HeapDumpRecord
 case class INSTANCE_DUMP(objId: Long, stackTraceSeqNum: Long, clzId: Long, content: ByteVector) extends HeapDumpRecord
 
 case class HEAPDUMP(timestamp: Long, heapDumpRecords: List[HeapDumpRecord])
 object HEAPDUMP {
   def heapdumpcodec(idSize: Int) = {
-    val idCodec = fromIdSize(idSize)
-    Tag.decode(list(HeapDumpRecord.heapDumpRecordCodec(idCodec))) {
+    Tag.decode(list(HeapDumpRecord.heapDumpRecordCodec(idSize))) {
       case (p1, x) => (p1._1, x)
     }.flattenLeftPairs.as[HEAPDUMP]
   }

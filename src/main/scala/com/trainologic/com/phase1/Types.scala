@@ -22,45 +22,56 @@ object Types {
   
   abstract sealed class BasicType {
     def codec(idCodec: Codec[Long]): Decoder[Value]
+    def size(idSize: Int) : Int
   }
   
   case object ArrayType extends BasicType {
 	  override def codec(idCodec: Codec[Long]) = idCodec.as[ArrayObjValue]
+	  override def size(idSize: Int) = idSize
   }
   
   
   case object ObjectType extends BasicType {
 	   override def codec(idCodec: Codec[Long]) = idCodec.as[ObjValue]
+	   override def size(idSize: Int) = idSize
   }
   case object BooleanType extends BasicType{
 	   override def codec(idCodec: Codec[Long]) = bool(8).as[BooleanValue]
+	   override def size(idSize: Int) = 1
     
   }  
   case object CharType extends BasicType {
-	   override def codec(idCodec: Codec[Long]) = short16.decoderOnlyMap(_.toChar).as[CharValue] 
+	   override def codec(idCodec: Codec[Long]) = short16.decoderOnlyMap(_.toChar).as[CharValue]
+	   override def size(idSize: Int) = 2
   }
   case object FloatType extends BasicType {
 	   override def codec(idCodec: Codec[Long]) = float.as[FloatValue] 
+	   override def size(idSize: Int) = 4
     
   }
   case object DoubleType extends BasicType {
 	   override def codec(idCodec: Codec[Long]) = double.as[DoubleValue] 
+	   override def size(idSize: Int) = 8
     
   }
   case object ByteType extends BasicType{
 	   override def codec(idCodec: Codec[Long]) = byte.as[ByteValue] 
+	   override def size(idSize: Int) = 1
     
   }
   case object ShortType extends BasicType{
 	   override def codec(idCodec: Codec[Long]) = short16.as[ShortValue] 
+	   override def size(idSize: Int) = 2
     
   }
   case object IntType extends BasicType{
 	   override def codec(idCodec: Codec[Long]) = int32.as[IntValue] 
+	   override def size(idSize: Int) = 4
     
   }
   case object LongType extends BasicType{
 	   override def codec(idCodec: Codec[Long]) = int64L.as[LongValue] 
+	   override def size(idSize: Int) = 8
     
   }
 
