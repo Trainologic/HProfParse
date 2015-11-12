@@ -19,5 +19,6 @@ project/plugins/project/
 .settings
 .project
 .classpath
+java_*
 
 /bin/
