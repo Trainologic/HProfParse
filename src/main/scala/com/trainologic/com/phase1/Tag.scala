@@ -20,6 +20,13 @@ object Tag {
 
   def decode[A, B](c: Codec[A])(f: ((((Long, Long), A)) => B)): Codec[B] =
     Tag.tagDec(c).decoderOnlyMap(f)
+    
+    
+  def heapdumpcodec = discriminated[Tag].by(byte).typecase(1, UTF8.utf8codec(8)).
+      typecase(2, LOADCLASS.loadclasscodec(8)).
+      typecase(5, TRACE.tracecodec(8)).
+      typecase(4, FRAME.framecodec(8)).
+      typecase(12, HEAPDUMP.heapdumpcodec(8))
 }
 
 case class UTF8(timestamp: Long, id: Long, str: String) extends Tag(timestamp)
@@ -137,7 +144,7 @@ case class PRIMITIVE_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementType
 case class OBJECT_ARRAY_DUMP(objId: Long, stackTraceSeqNum: Long, elementClzId: Long, elements: List[Long]) extends HeapDumpRecord
 case class INSTANCE_DUMP(objId: Long, stackTraceSeqNum: Long, clzId: Long, content: ByteVector) extends HeapDumpRecord
 
-case class HEAPDUMP(timestamp: Long, heapDumpRecords: List[HeapDumpRecord])
+case class HEAPDUMP(timestamp: Long, heapDumpRecords: List[HeapDumpRecord]) extends Tag(timestamp)
 object HEAPDUMP {
   def heapdumpcodec(idSize: Int) = {
     Tag.decode(list(HeapDumpRecord.heapDumpRecordCodec(idSize))) {
